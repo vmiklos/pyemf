@@ -1818,6 +1818,46 @@ class _EMR:
             _EMR_UNKNOWN.__init__(self)
             self.handle=handle
 
+    class _COMMENT(_EMR_UNKNOWN):
+        emr_id=70
+        typedef=[
+            ('I', 'DataSize'),
+            ('I', 'CommentIdentifier'),
+            ('I', 'PublicCommentIdentifier'),
+            ('I', 'OutRectLeft'),
+            ('I', 'OutRectTop'),
+            ('I', 'OutRectRight'),
+            ('I', 'OutRectBottom'),
+            ('I', 'CountFormats'),
+            ('I', 'Signature'),
+            ('I', 'Version'),
+            ('I', 'SizeData'),
+            ('I', 'OffData'),
+        ]
+
+        def __init__(self):
+            _EMR_UNKNOWN.__init__(self)
+            with open("test.pdf", "rb") as stream:
+                self.unhandleddata = stream.read()
+            unpadded_size = len(self.unhandleddata)
+            unpadded = len(self.unhandleddata) % 4
+            if unpadded:
+                self.unhandleddata += b'\0' * (4 - unpadded)
+
+            self.DataSize = unpadded_size
+            self.CommentIdentifier = 0x43494447 # EMR_COMMENT_PUBLIC
+            self.PublicCommentIdentifier = 0x40000004 # EMR_COMMENT_MULTIFORMATS
+            self.OutRectLeft = 0
+            self.OutRectTop = 0
+            self.OutRectRight = 197
+            self.OutRectBottom = 197
+            self.CountFormats = 1
+            self.Signature = 0x50444620 # "PDF "
+            self.Version = 1
+            self.SizeData = unpadded_size
+            self.OffData = 44 # 4*11, 11 ints from CommentIdentifier to OffData, including both
+            self.DataSize += self.OffData
+
 
     # Note: a line will still be drawn when the linewidth==0.  To force an
     # invisible line, use style=PS_NULL
@@ -2713,6 +2753,9 @@ Make the given graphics object current.
 
         """
         return self._append(_EMR._SELECTOBJECT(self.dc,handle))
+
+    def Comment(self):
+        return self._append(_EMR._COMMENT())
 
     def DeleteObject(self,handle):
         """
